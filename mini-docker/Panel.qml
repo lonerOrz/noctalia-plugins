@@ -74,8 +74,18 @@ Item {
         inspectProcess.running = true;
     }
 
-    function finalizeRunImage(image, port, network) {
+    function finalizeRunImage(image, port, network, name, envVars) {
         var cmd = ["docker", "run", "-d"];
+        if (name && name.trim() !== "") {
+            cmd.push("--name");
+            cmd.push(name.trim());
+        }
+        if (envVars && envVars.length > 0) {
+            envVars.forEach(function(e) {
+                cmd.push("-e");
+                cmd.push(e);
+            });
+        }
         if (port && port.trim() !== "") {
             cmd.push("-p");
             cmd.push(port + ":" + port);
@@ -392,7 +402,9 @@ Item {
                     runImageDialog.errorMessage = "Port " + portCheckProcess.pendingPort + " is occupied on host.";
                 } else {
                     runImageDialog.close();
-                    finalizeRunImage(runImageDialog.imageRepo + ":" + runImageDialog.imageTag, portCheckProcess.pendingPort, portCheckProcess.pendingNetwork);
+                    // Retrieve stashed data
+                    var pd = runImageDialog.pendingRunData || {};
+                    finalizeRunImage(runImageDialog.imageRepo + ":" + runImageDialog.imageTag, portCheckProcess.pendingPort, portCheckProcess.pendingNetwork, pd.name, pd.envs);
                 }
             }
         }
@@ -401,7 +413,8 @@ Item {
     RunImageDialog {
         id: runImageDialog
         pluginApi: root.pluginApi
-        onRequestRun: (image, port, network) => finalizeRunImage(image, port, network)
+        networksModel: root.networksModel
+        onRequestRun: (image, port, network, name, envs) => finalizeRunImage(image, port, network, name, envs)
         onRequestPortCheck: (port, network) => {
             portCheckProcess.pendingPort = port;
             portCheckProcess.pendingNetwork = network;
